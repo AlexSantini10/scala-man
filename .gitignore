@@ -127,6 +127,10 @@ project/metals.sbt
 # scala-cli
 .scala-build/
 
+# LaTeX / report builds
+build/
+report/build/
+
 # VS Code
 .vscode/
 

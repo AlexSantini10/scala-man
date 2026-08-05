@@ -6,6 +6,7 @@ main.fls
 main.fdb_latexmk
 main.synctex.gz
 main.pdf
+build/
 *.aux
 *.log
 *.out

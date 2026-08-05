@@ -1,21 +1,19 @@
 .RECIPEPREFIX := >
 
 PDF = report.pdf
+BUILD_DIR = build
 SOURCE = main.tex
-TEMP_PATTERNS_PY = ['*.aux', '*.log', '*.out', '*.toc', '*.fls', '*.fdb_latexmk', '*.synctex.gz', '*.nav', '*.snm', '*.lof', '*.lot']
+LATEXMK_FLAGS = -pdf -interaction=nonstopmode -halt-on-error -file-line-error -jobname=report -outdir=$(BUILD_DIR)
 
 .DEFAULT_GOAL := all
-.PHONY: all clean postbuild
+.PHONY: all clean
 
-all: postbuild
+all: $(PDF)
 
 $(PDF): $(SOURCE)
->-pdflatex -interaction=nonstopmode -halt-on-error -jobname=report $(SOURCE)
->-pdflatex -interaction=nonstopmode -halt-on-error -jobname=report $(SOURCE)
->python -c "from pathlib import Path; import shutil, sys; main = Path('main.pdf'); report = Path('report.pdf'); patterns = $(TEMP_PATTERNS_PY); sys.exit(1) if (not main.exists() and not report.exists()) else None; shutil.copy2(main, report) if main.exists() else None; [path.unlink(missing_ok=True) for pattern in patterns for path in Path('.').rglob(pattern)]; main.unlink(missing_ok=True)"
-
-postbuild: $(PDF)
->python -c "from pathlib import Path; patterns = $(TEMP_PATTERNS_PY); [path.unlink(missing_ok=True) for pattern in patterns for path in Path('.').rglob(pattern)]; Path('main.pdf').unlink(missing_ok=True)"
+>latexmk $(LATEXMK_FLAGS) $(SOURCE)
+>python -c "from pathlib import Path; import shutil, sys; build_pdf = Path('$(BUILD_DIR)/report.pdf'); report_pdf = Path('$(PDF)'); build_dir = Path('$(BUILD_DIR)'); report_pdf.unlink(missing_ok=True); shutil.copy2(build_pdf, report_pdf) if build_pdf.exists() else None; shutil.rmtree(build_dir, ignore_errors=True); sys.exit(1) if not report_pdf.exists() else None"
 
 clean:
->python -c "from pathlib import Path; targets = [Path('$(PDF)'), Path('main.pdf')]; patterns = $(TEMP_PATTERNS_PY); [path.unlink(missing_ok=True) for pattern in patterns for path in Path('.').rglob(pattern)]; [path.unlink(missing_ok=True) for path in targets]"
+>latexmk -C $(LATEXMK_FLAGS) $(SOURCE)
+>python -c "from pathlib import Path; import shutil; Path('$(PDF)').unlink(missing_ok=True); shutil.rmtree(Path('$(BUILD_DIR)'), ignore_errors=True); Path('main.pdf').unlink(missing_ok=True)"
