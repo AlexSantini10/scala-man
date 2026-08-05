@@ -2,7 +2,9 @@ name: Project Delivery
 
 on:
   push:
-    # Temporary test mode: run on every push. Should be changed into "main" branch only after the first release.
+    #branches:
+    #  - main
+  workflow_dispatch:
 
 concurrency:
   group: project-delivery-${{ github.ref }}
@@ -12,8 +14,6 @@ jobs:
   delivery:
     name: Project Delivery
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/xu-cheng/texlive-full:latest
     permissions:
       contents: write
 
@@ -39,6 +39,10 @@ jobs:
 
       - name: Build report PDF
         run: >
+          docker run --rm
+          -v "${PWD}:/repo"
+          -w /repo
+          ghcr.io/xu-cheng/texlive-full:latest
           latexmk
           -pdf
           -interaction=nonstopmode
@@ -82,15 +86,14 @@ jobs:
               names = [name.rstrip("/") for name in zf.namelist() if name and not name.endswith("/")]
 
           root_files = sorted(name for name in names if "/" not in name)
-          root_dirs = sorted({name.split("/", 1)[0] for name in names if "/" in name})
 
           errors = []
           jar_files = [name for name in root_files if name.endswith(".jar")]
           report_files = [name for name in root_files if name == "report.pdf"]
           other_root_files = [name for name in root_files if name not in {"report.pdf"} and not name.endswith(".jar")]
 
-          if root_dirs != ["src"]:
-              errors.append(f"expected the only root directory to be src, found {root_dirs}")
+          if sorted({name.split("/", 1)[0] for name in names if "/" in name}) != ["src"]:
+              errors.append("expected the only root directory to be src")
           if len(jar_files) != 1:
               errors.append(f"expected exactly one root fat jar, found {jar_files}")
           if len(report_files) != 1:
