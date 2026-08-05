@@ -2,8 +2,8 @@ name: Project Delivery
 
 on:
   push:
-    #branches:
-    #  - main
+    branches:
+      - "**"
   workflow_dispatch:
 
 concurrency:
@@ -41,7 +41,7 @@ jobs:
         run: >
           docker run --rm
           -v "${PWD}:/repo"
-          -w /repo
+          -w /repo/report
           ghcr.io/xu-cheng/texlive-full:latest
           latexmk
           -pdf
@@ -49,8 +49,8 @@ jobs:
           -halt-on-error
           -file-line-error
           -jobname=report
-          -outdir=build
-          report/main.tex
+          -outdir=../build
+          main.tex
 
       - name: Build report PDF and package delivery
         run: |
@@ -106,7 +106,6 @@ jobs:
           PY
 
       - name: Publish latest release
-        if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
