@@ -8,6 +8,8 @@ jobs:
   delivery:
     name: Project Delivery
     runs-on: ubuntu-latest
+    container:
+      image: texlive/texlive:latest
     permissions:
       contents: write
 
@@ -31,29 +33,37 @@ jobs:
       - name: Build fat JAR
         run: sbt -v assembly
 
-      - name: Install LaTeX dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended
-
       - name: Build report PDF
         run: make -C report
 
-      - name: Create delivery archive
+      - name: Build report PDF and package delivery
         run: |
-          set -e
-          rm -rf delivery-package PPS-25-scala-man.zip
-          mkdir -p delivery-package
-          cp -R src delivery-package/src
-          cp target/scala-*/scala-man-*-fat.jar delivery-package/
-          cp report/report.pdf delivery-package/
-          (cd delivery-package && zip -r ../PPS-25-scala-man.zip src *.jar report.pdf)
           python - <<'PY'
           from pathlib import Path
-          import sys
+          import shutil
           import zipfile
 
-          archive = Path("scala-man-delivery.zip")
+          archive = Path("PPS-25-scala-man.zip")
+          staging = Path("delivery-package")
+
+          if staging.exists():
+              shutil.rmtree(staging)
+          if archive.exists():
+              archive.unlink()
+
+          staging.mkdir()
+          shutil.copytree("src", staging / "src")
+
+          jar = next(Path("target").glob("scala-*/scala-man-*-fat.jar"))
+          shutil.copy2(jar, staging / jar.name)
+          shutil.copy2("report/report.pdf", staging / "report.pdf")
+
+          with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+              zf.write(staging / "report.pdf", "report.pdf")
+              zf.write(staging / jar.name, jar.name)
+              for path in (staging / "src").rglob("*"):
+                  if path.is_file():
+                      zf.write(path, path.relative_to(staging).as_posix())
 
           with zipfile.ZipFile(archive) as zf:
               names = [name.rstrip("/") for name in zf.namelist() if name and not name.endswith("/")]
