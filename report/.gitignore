@@ -1,0 +1,16 @@
+main.aux
+main.log
+main.out
+main.toc
+main.fls
+main.fdb_latexmk
+main.synctex.gz
+main.pdf
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+report.pdf

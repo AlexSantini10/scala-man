@@ -1,0 +1,52 @@
+name: Scala Delivery
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  delivery:
+    name: Scala Delivery
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: sbt
+
+      - name: Set up sbt
+        uses: sbt/setup-sbt@v1
+
+      - name: Compile and test
+        run: sbt -v compile test
+
+      - name: Build fat JAR
+        run: sbt -v assembly
+
+      - name: Install LaTeX dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended
+
+      - name: Build report PDF
+        run: make -C report
+
+      - name: Publish latest release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: latest
+          make_latest: true
+          generate_release_notes: false
+          files: |
+            target/scala-*/scala-man-*-fat.jar
+            report/report.pdf
