@@ -8,5 +8,6 @@ lazy val root = (project in file("."))
   .settings(
     name := "scala-man",
     libraryDependencies += "com.github.sbt" % "junit-interface" % "0.13.3" % Test,
-    libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.18" % Test
+    libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.18" % Test,
+    wartremoverErrors ++= Warts.unsafe
   )
