@@ -42,12 +42,12 @@ jobs:
       - name: Create delivery archive
         run: |
           set -e
-          rm -rf delivery-package scala-man-delivery.zip
+          rm -rf delivery-package PPS-25-scala-man.zip
           mkdir -p delivery-package
           cp -R src delivery-package/src
           cp target/scala-*/scala-man-*-fat.jar delivery-package/
           cp report/report.pdf delivery-package/
-          (cd delivery-package && zip -r ../scala-man-delivery.zip src *.jar report.pdf)
+          (cd delivery-package && zip -r ../PPS-25-scala-man.zip src *.jar report.pdf)
           python - <<'PY'
           from pathlib import Path
           import sys
@@ -87,4 +87,4 @@ jobs:
           make_latest: true
           generate_release_notes: false
           files: |
-            scala-man-delivery.zip
+            PPS-25-scala-man.zip
