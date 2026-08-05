@@ -1,10 +1,8 @@
 package it.unibo.pps.scalaman
 
-import org.junit.Assert.*
-import org.junit.Test
+import org.scalatest.funsuite.AnyFunSuite
 
-class MainTest:
-
-  @Test
-  def testApplicationName =
-    assertEquals("scala-man", applicationName)
+class MainTest extends AnyFunSuite:
+  test("application name is scala-man") {
+    assert(applicationName == "scala-man")
+  }
