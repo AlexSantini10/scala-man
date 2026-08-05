@@ -1,9 +1,7 @@
 import sbtassembly.AssemblyPlugin.autoImport._
 
 ThisBuild / version := "0.1.0-SNAPSHOT"
-
 ThisBuild / scalaVersion := "3.3.5"
-
 ThisBuild / organization := "it.unibo.pps"
 
 lazy val root = (project in file("."))
