@@ -1,4 +1,4 @@
-name: Scala Delivery
+name: Project Delivery
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
 
 jobs:
   delivery:
-    name: Scala Delivery
+    name: Project Delivery
     runs-on: ubuntu-latest
     permissions:
       contents: write
