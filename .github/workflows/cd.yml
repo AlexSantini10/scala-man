@@ -48,9 +48,6 @@ jobs:
           cp target/scala-*/scala-man-*-fat.jar delivery-package/
           cp report/report.pdf delivery-package/
           (cd delivery-package && zip -r ../scala-man-delivery.zip src *.jar report.pdf)
-
-      - name: Validate delivery archive
-        run: |
           python - <<'PY'
           from pathlib import Path
           import sys
