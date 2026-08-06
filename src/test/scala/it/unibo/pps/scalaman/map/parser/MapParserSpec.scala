@@ -17,6 +17,9 @@ class MapParserSpec extends AnyFunSuite, MapTestSupport:
       "#######"
     )
 
+  private def assertCell(map: it.unibo.pps.scalaman.model.map.RawMap, row: Int, col: Int, expected: Cell): Unit =
+    assert(map.rows(row)(col) == expected)
+
   test("parses a valid rectangular map with spawn, collectible, enemies, bonuses, and a teleport pair") {
     val parsed = MapParser.parse(resourceText("valid/basic-map.txt"))
 
@@ -35,6 +38,43 @@ class MapParserSpec extends AnyFunSuite, MapTestSupport:
       case Cell.Teleport(5) => true
       case _ => false
     })
+  }
+
+  test("maps every documented base and overlay symbol to the expected cell") {
+    val parsed = MapParser.parse(
+      mapText(
+        "##########",
+        "#.SCHAIR.#",
+        "##########"
+      )
+    )
+
+    assert(parsed.isRight)
+    val map = parsed.toOption.get
+    assertCell(map, 1, 1, Cell.Floor)
+    assertCell(map, 1, 2, Cell.Spawn)
+    assertCell(map, 1, 3, Cell.Collectible)
+    assertCell(map, 1, 4, Cell.Hunter)
+    assertCell(map, 1, 5, Cell.Anticipator)
+    assertCell(map, 1, 6, Cell.InvulnerabilityBonus)
+    assertCell(map, 1, 7, Cell.SlowdownBonus)
+    assertCell(map, 1, 8, Cell.Floor)
+  }
+
+  test("maps every teleport digit to the matching teleport cell") {
+    val parsed = MapParser.parse(
+      mapText(
+        "############",
+        "#0123456789#",
+        "############"
+      )
+    )
+
+    assert(parsed.isRight)
+    val map = parsed.toOption.get
+    (0 to 9).foreach { code =>
+      assertCell(map, 1, code + 1, Cell.Teleport(code))
+    }
   }
 
   test("parses every documented teleport pairing") {
