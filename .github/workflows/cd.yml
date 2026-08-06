@@ -1,0 +1,116 @@
+name: Project Delivery
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: project-delivery-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  delivery:
+    name: Project Delivery
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: sbt
+
+      - name: Set up sbt
+        uses: sbt/setup-sbt@v1
+
+      - name: Compile and test
+        run: sbt -v compile test
+
+      - name: Build fat JAR
+        run: sbt -v assembly
+
+      - name: Build report PDF
+        run: >
+          docker run --rm
+          -v "${PWD}:/repo"
+          -w /repo/report
+          ghcr.io/xu-cheng/texlive-full:latest
+          latexmk
+          -pdf
+          -interaction=nonstopmode
+          -halt-on-error
+          -file-line-error
+          -jobname=report
+          -outdir=../build
+          main.tex
+
+      - name: Build report PDF and package delivery
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import shutil
+          import zipfile
+
+          archive = Path("PPS-25-scala-man.zip")
+          staging = Path("delivery-package")
+          report_pdf = Path("build/report.pdf")
+
+          if staging.exists():
+              shutil.rmtree(staging)
+          if archive.exists():
+              archive.unlink()
+
+          staging.mkdir()
+          shutil.copytree("src", staging / "src")
+
+          jar = next(Path("target").glob("scala-*/scala-man-*-fat.jar"))
+          shutil.copy2(jar, staging / jar.name)
+          shutil.copy2(report_pdf, staging / "report.pdf")
+
+          with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+              zf.write(staging / "report.pdf", "report.pdf")
+              zf.write(staging / jar.name, jar.name)
+              for path in (staging / "src").rglob("*"):
+                  if path.is_file():
+                      zf.write(path, path.relative_to(staging).as_posix())
+
+          with zipfile.ZipFile(archive) as zf:
+              names = [name.rstrip("/") for name in zf.namelist() if name and not name.endswith("/")]
+
+          root_files = sorted(name for name in names if "/" not in name)
+
+          errors = []
+          jar_files = [name for name in root_files if name.endswith(".jar")]
+          report_files = [name for name in root_files if name == "report.pdf"]
+          other_root_files = [name for name in root_files if name not in {"report.pdf"} and not name.endswith(".jar")]
+
+          if sorted({name.split("/", 1)[0] for name in names if "/" in name}) != ["src"]:
+              errors.append("expected the only root directory to be src")
+          if len(jar_files) != 1:
+              errors.append(f"expected exactly one root fat jar, found {jar_files}")
+          if len(report_files) != 1:
+              errors.append(f"expected exactly one root report pdf, found {report_files}")
+          if other_root_files:
+              errors.append(f"unexpected root files: {other_root_files}")
+
+          if errors:
+              raise SystemExit("; ".join(errors))
+          PY
+
+      - name: Publish latest release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: PPS-25-scala-man
+          make_latest: true
+          generate_release_notes: false
+          files: |
+            PPS-25-scala-man.zip
