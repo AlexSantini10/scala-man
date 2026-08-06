@@ -1,0 +1,73 @@
+\documentclass[11pt,a4paper]{report}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage[useregional]{datetime2}
+
+\geometry{margin=2.5cm}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=black,
+  citecolor=black,
+  pdftitle={scala-man Final Report}
+}
+
+\newcommand{\todayFullUS}{\DTMtoday}
+
+\title{scala-man}
+\author{%
+  Matilde D'Antino\\%
+  Gaia Mazzoni\\%
+  Alex Santini%
+}
+\date{\today}
+
+\begin{document}
+
+\pagenumbering{gobble}
+\begin{titlepage}
+    \centering
+    \vspace*{2.2cm}
+
+    {\Large PPS -- Programming Paradigms and Development\par}
+    \vspace{1.2cm}
+    {\rule{0.82\textwidth}{0.5pt}\par}
+    \vspace{0.9cm}
+    {\huge\bfseries scala-man\par}
+    \vspace{0.35cm}
+    {\LARGE Final Report\par}
+    \vspace{0.45cm}
+    \vspace{0.9cm}
+    {\rule{0.82\textwidth}{0.5pt}\par}
+
+    \vspace{1.6cm}
+    {\large\textbf{Authors}\par}
+    \vspace{0.25cm}
+    {\large \href{https://github.com/matidan01}{Matilde D'Antino}\par}
+    {\large \href{https://github.com/GaiaMazzoni}{Gaia Mazzoni}\par}
+    {\large \href{https://github.com/AlexSantini10}{Alex Santini}\par}
+
+    \vfill
+    {\large Academic Year 2025/2026\par}
+    {\large \todayFullUS\par}
+\end{titlepage}
+
+\pagenumbering{arabic}
+\tableofcontents
+\clearpage
+
+\input{chapters/01-introduction}
+\input{chapters/02-development-process}
+\input{chapters/03-requirement-specification}
+\input{chapters/04-architectural-design}
+\input{chapters/05-detailed-design}
+\input{chapters/06-implementation}
+\input{chapters/07-testing}
+\input{chapters/08-retrospective}
+
+\end{document}
