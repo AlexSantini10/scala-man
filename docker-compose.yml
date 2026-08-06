@@ -1,0 +1,15 @@
+services:
+  latex:
+    image: ghcr.io/xu-cheng/texlive-full:latest
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+    command: >
+      latexmk
+      -pdf
+      -interaction=nonstopmode
+      -halt-on-error
+      -file-line-error
+      -jobname=report
+      -outdir=build
+      report/main.tex
