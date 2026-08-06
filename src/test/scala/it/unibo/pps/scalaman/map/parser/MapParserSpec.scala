@@ -3,21 +3,13 @@ package it.unibo.pps.scalaman.map.parser
 import it.unibo.pps.scalaman.model.map.Cell
 import it.unibo.pps.scalaman.model.map.MapParseError
 import it.unibo.pps.scalaman.model.map.MapTestSupport
+import it.unibo.pps.scalaman.model.map.RawMap
 import org.scalatest.funsuite.AnyFunSuite
 
 class MapParserSpec extends AnyFunSuite, MapTestSupport:
   private val teleportPairs = List(0 -> 5, 1 -> 6, 2 -> 7, 3 -> 8, 4 -> 9)
 
-  private def teleportMap(start: Int, paired: Int): String =
-    mapText(
-      "#######",
-      s"#S.${start}I.#",
-      "#R....#",
-      s"#C.${paired}HA#",
-      "#######"
-    )
-
-  private def assertCell(map: it.unibo.pps.scalaman.model.map.RawMap, row: Int, col: Int, expected: Cell): Unit =
+  private def assertCell(map: RawMap, row: Int, col: Int, expected: Cell): Unit =
     assert(map.rows(row)(col) == expected)
 
   test("parses a valid rectangular map with spawn, collectible, enemies, bonuses, and a teleport pair") {
@@ -41,13 +33,7 @@ class MapParserSpec extends AnyFunSuite, MapTestSupport:
   }
 
   test("maps every documented base and overlay symbol to the expected cell") {
-    val parsed = MapParser.parse(
-      mapText(
-        "##########",
-        "#.SCHAIR.#",
-        "##########"
-      )
-    )
+    val parsed = MapParser.parse(resourceText("valid/symbol-mapping.txt"))
 
     assert(parsed.isRight)
     val map = parsed.toOption.get
@@ -62,13 +48,7 @@ class MapParserSpec extends AnyFunSuite, MapTestSupport:
   }
 
   test("maps every teleport digit to the matching teleport cell") {
-    val parsed = MapParser.parse(
-      mapText(
-        "############",
-        "#0123456789#",
-        "############"
-      )
-    )
+    val parsed = MapParser.parse(resourceText("valid/teleport-digits.txt"))
 
     assert(parsed.isRight)
     val map = parsed.toOption.get
@@ -79,7 +59,7 @@ class MapParserSpec extends AnyFunSuite, MapTestSupport:
 
   test("parses every documented teleport pairing") {
     teleportPairs.foreach { case (start, paired) =>
-      val parsed = MapParser.parse(teleportMap(start, paired))
+      val parsed = MapParser.parse(resourceText(s"valid/teleport-pairs/$start-$paired.txt"))
 
       assert(parsed.isRight)
       val map = parsed.toOption.get
@@ -89,7 +69,7 @@ class MapParserSpec extends AnyFunSuite, MapTestSupport:
   }
 
   test("rejects empty maps") {
-    val parsed = MapParser.parse("")
+    val parsed = MapParser.parse(resourceText("invalid/empty-map.txt"))
 
     assert(parsed == Left(List(MapParseError.EmptyMap)))
   }

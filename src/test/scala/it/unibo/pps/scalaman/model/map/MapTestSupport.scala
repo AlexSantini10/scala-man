@@ -6,9 +6,6 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 trait MapTestSupport:
-  protected def mapText(rows: String*): String =
-    rows.mkString("\n")
-
   protected def resourcePath(resource: String): Path =
     val url = Option(getClass.getResource(s"/maps/$resource"))
       .getOrElse(throw new IllegalArgumentException(s"Missing test resource: $resource"))

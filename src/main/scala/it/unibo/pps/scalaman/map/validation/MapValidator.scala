@@ -69,9 +69,17 @@ object MapValidator:
           val reachable = reachablePositions(map, spawnPositions.head, pairedTeleports.toMap)
           val unreachableCollectibles =
             collectibles.iterator.filterNot(reachable.contains).toVector.sortBy(position => (position.row, position.col))
+          val unreachableEnemies =
+            enemies.iterator
+              .filterNot(enemy => reachable.contains(enemy.position))
+              .toVector
+              .sortBy(enemy => (enemy.position.row, enemy.position.col))
 
-          if unreachableCollectibles.nonEmpty then
-            Left(unreachableCollectibles.map(MapValidationError.UnreachableCollectible).toList)
+          if unreachableCollectibles.nonEmpty || unreachableEnemies.nonEmpty then
+            Left(
+              unreachableCollectibles.map(MapValidationError.UnreachableCollectible).toList ++
+                unreachableEnemies.map(enemy => MapValidationError.UnreachableEnemy(enemy.position)).toList
+            )
           else
             Right(
               ValidatedMap(

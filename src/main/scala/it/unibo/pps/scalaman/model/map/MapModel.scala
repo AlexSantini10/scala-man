@@ -46,6 +46,7 @@ object MapValidationError:
   case object MissingCollectible extends MapValidationError
   case object MissingEnemy extends MapValidationError
   final case class UnreachableCollectible(position: Position) extends MapValidationError
+  final case class UnreachableEnemy(position: Position) extends MapValidationError
   final case class InvalidTeleportPair(code: Int, occurrences: Int) extends MapValidationError
   final case class UnsupportedTeleportCode(code: Int) extends MapValidationError
 
