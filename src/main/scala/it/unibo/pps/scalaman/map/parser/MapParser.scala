@@ -6,30 +6,45 @@ import it.unibo.pps.scalaman.model.map.RawMap
 
 object MapParser:
   def parse(text: String): Either[List[MapParseError], RawMap] =
-    val rows = text.linesIterator.toVector
-    if rows.isEmpty || rows.forall(_.isEmpty) then Left(List(MapParseError.EmptyMap))
+    val lines = text.linesIterator.toVector
+    if isEmptyMap(lines) then Left(List(MapParseError.EmptyMap))
     else
-      val expectedWidth = rows.head.length
-      val errors = collectErrors(rows, expectedWidth)
+      val expectedWidth = lines.head.length
+      val errors = syntaxErrors(lines, expectedWidth)
 
       if errors.nonEmpty then Left(errors)
-      else Right(RawMap(rows.map(row => row.map(char => toCell(char).get).toVector)))
+      else Right(RawMap(lines.map(parseRow)))
 
-  private def collectErrors(rows: Vector[String], expectedWidth: Int): List[MapParseError] =
-    rows.zipWithIndex.flatMap { case (row, rowIndex) =>
-      val ragged =
-        if row.length != expectedWidth then List(MapParseError.RaggedRow(rowIndex, expectedWidth, row.length))
-        else Nil
+  private def isEmptyMap(lines: Vector[String]): Boolean =
+    lines.isEmpty || lines.forall(_.isEmpty)
 
-      val unsupported = row.zipWithIndex.collect {
-        case (char, colIndex) if toCell(char).isEmpty =>
-          MapParseError.UnsupportedSymbol(char, rowIndex, colIndex)
-      }
-
-      ragged ++ unsupported
+  private def syntaxErrors(lines: Vector[String], expectedWidth: Int): List[MapParseError] =
+    lines.zipWithIndex.flatMap { case (line, rowIndex) =>
+      rowErrors(line, rowIndex, expectedWidth)
     }.toList
 
-  private def toCell(char: Char): Option[Cell] =
+  private def rowErrors(line: String, rowIndex: Int, expectedWidth: Int): List[MapParseError] =
+    val raggedRowError =
+      if line.length == expectedWidth then Nil
+      else List(MapParseError.RaggedRow(rowIndex, expectedWidth, line.length))
+
+    raggedRowError ++ unsupportedSymbolErrors(line, rowIndex)
+
+  private def unsupportedSymbolErrors(line: String, rowIndex: Int): List[MapParseError] =
+    line.zipWithIndex.collect {
+      case (char, colIndex) if supportedCell(char).isEmpty =>
+        MapParseError.UnsupportedSymbol(char, rowIndex, colIndex)
+    }.toList
+
+  private def parseRow(line: String): Vector[Cell] =
+    line.iterator.map(parseCell).toVector
+
+  private def parseCell(char: Char): Cell =
+    supportedCell(char).getOrElse(
+      throw new IllegalArgumentException(s"Unsupported symbol '$char' reached parser output")
+    )
+
+  private def supportedCell(char: Char): Option[Cell] =
     char match
       case '#' => Some(Cell.Wall)
       case '.' => Some(Cell.Floor)

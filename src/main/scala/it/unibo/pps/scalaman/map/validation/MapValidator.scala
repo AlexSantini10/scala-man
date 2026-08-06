@@ -1,6 +1,7 @@
 package it.unibo.pps.scalaman.map.validation
 
-import scala.collection.mutable
+import scala.annotation.tailrec
+import scala.collection.immutable.Queue
 
 import it.unibo.pps.scalaman.model.map.Cell
 import it.unibo.pps.scalaman.model.map.Enemy
@@ -12,122 +13,130 @@ import it.unibo.pps.scalaman.model.map.ValidatedMap
 
 object MapValidator:
   def validate(map: RawMap): Either[List[MapValidationError], ValidatedMap] =
-    if map.height <= 0 || map.width <= 0 || map.rows.exists(_.length != map.width) then
+    if hasInvalidDimensions(map) then
       Left(List(MapValidationError.InvalidDimensions(map.height, map.width)))
     else
-      val spawnPositions = mutable.ListBuffer.empty[Position]
-      val collectibles = mutable.Set.empty[Position]
-      val enemies = mutable.Set.empty[Enemy]
-      val teleportPositions = mutable.Map.empty[Int, mutable.ListBuffer[Position]]
-      val errors = mutable.ListBuffer.empty[MapValidationError]
+      val inspection = inspect(map)
+      val structuralErrors =
+        requiredEntityErrors(inspection) ++
+          spawnCountErrors(inspection.spawnPositions) ++
+          unsupportedTeleportCodeErrors(inspection.teleportPositions)
+      val teleportValidation = pairTeleports(inspection.teleportPositions)
+      val allStructuralErrors = structuralErrors ++ teleportValidation.errors
 
-      for
-        (row, rowIndex) <- map.rows.zipWithIndex
-        (cell, colIndex) <- row.zipWithIndex
-      do
-        val position = Position(rowIndex, colIndex)
-        cell match
-          case Cell.Wall | Cell.Floor => ()
-          case Cell.Spawn =>
-            spawnPositions += position
-          case Cell.Collectible =>
-            collectibles += position
-          case Cell.Hunter =>
-            enemies += Enemy(position, EnemyKind.Hunter)
-          case Cell.Anticipator =>
-            enemies += Enemy(position, EnemyKind.Anticipator)
-          case Cell.InvulnerabilityBonus | Cell.SlowdownBonus => ()
-          case Cell.Teleport(code) =>
-            if code < 0 || code > 9 then errors += MapValidationError.UnsupportedTeleportCode(code)
-            else
-              val positions = teleportPositions.getOrElseUpdate(code, mutable.ListBuffer.empty)
-              positions += position
+      if allStructuralErrors.nonEmpty then Left(allStructuralErrors)
+      else
+        val reachable = reachablePositions(map, inspection.spawnPositions.head, teleportValidation.pairs)
+        val reachabilityIssues = reachabilityProblems(inspection, reachable)
 
-      if errors.isEmpty then
-        spawnPositions.size match
-          case 0 => errors += MapValidationError.MissingSpawn
-          case 1 => ()
-          case count => errors += MapValidationError.InvalidSpawnCount(count)
-
-        if collectibles.isEmpty then errors += MapValidationError.MissingCollectible
-        if enemies.isEmpty then errors += MapValidationError.MissingEnemy
-
-        val pairedTeleports = mutable.Map.empty[Int, (Position, Position)]
-
-        for code <- 0 to 4 do
-          val startPositions = teleportPositions.get(code).map(_.toVector).getOrElse(Vector.empty)
-          val pairedPositions = teleportPositions.get(code + 5).map(_.toVector).getOrElse(Vector.empty)
-          val occurrences = startPositions.size + pairedPositions.size
-
-          if occurrences == 0 then ()
-          else if startPositions.size == 1 && pairedPositions.size == 1 then
-            pairedTeleports += code -> (startPositions.head, pairedPositions.head)
-          else
-            errors += MapValidationError.InvalidTeleportPair(code, occurrences)
-
-        if errors.isEmpty then
-          val reachable = reachablePositions(map, spawnPositions.head, pairedTeleports.toMap)
-          val unreachableCollectibles =
-            collectibles.iterator.filterNot(reachable.contains).toVector.sortBy(position => (position.row, position.col))
-          val unreachableEnemies =
-            enemies.iterator
-              .filterNot(enemy => reachable.contains(enemy.position))
-              .toVector
-              .sortBy(enemy => (enemy.position.row, enemy.position.col))
-
-          if unreachableCollectibles.nonEmpty || unreachableEnemies.nonEmpty then
-            Left(
-              unreachableCollectibles.map(MapValidationError.UnreachableCollectible).toList ++
-                unreachableEnemies.map(enemy => MapValidationError.UnreachableEnemy(enemy.position)).toList
+        if reachabilityIssues.nonEmpty then Left(reachabilityIssues)
+        else
+          Right(
+            ValidatedMap(
+              raw = map,
+              spawn = inspection.spawnPositions.head,
+              collectibles = inspection.collectibles.toSet,
+              enemies = inspection.enemies.toSet,
+              teleports = teleportValidation.pairs
             )
-          else
-            Right(
-              ValidatedMap(
-                raw = map,
-                spawn = spawnPositions.head,
-                collectibles = collectibles.toSet,
-                enemies = enemies.toSet,
-                teleports = pairedTeleports.toMap
-              )
-            )
-        else Left(errors.toList)
-      else Left(errors.toList)
+          )
+
+  private def hasInvalidDimensions(map: RawMap): Boolean =
+    map.height <= 0 || map.width <= 0 || map.rows.exists(_.length != map.width)
+
+  private def inspect(map: RawMap): Inspection =
+    map.rows.zipWithIndex.foldLeft(Inspection.empty) { case (inspection, (row, rowIndex)) =>
+      row.zipWithIndex.foldLeft(inspection) { case (current, (cell, colIndex)) =>
+        current.record(cell, Position(rowIndex, colIndex))
+      }
+    }
+
+  private def requiredEntityErrors(inspection: Inspection): List[MapValidationError] =
+    List(
+      if inspection.collectibles.isEmpty then Some(MapValidationError.MissingCollectible) else None,
+      if inspection.enemies.isEmpty then Some(MapValidationError.MissingEnemy) else None
+    ).flatten
+
+  private def spawnCountErrors(spawnPositions: Vector[Position]): List[MapValidationError] =
+    spawnPositions.size match
+      case 0 => List(MapValidationError.MissingSpawn)
+      case 1 => Nil
+      case count => List(MapValidationError.InvalidSpawnCount(count))
+
+  private def pairTeleports(teleportPositions: Map[Int, Vector[Position]]): TeleportValidation =
+    val results = (0 to 4).map(code => pairTeleport(code, teleportPositions))
+    TeleportValidation(
+      errors = results.flatMap(_.errors).toList,
+      pairs = results.flatMap(_.pair).toMap
+    )
+
+  private def unsupportedTeleportCodeErrors(teleportPositions: Map[Int, Vector[Position]]): List[MapValidationError] =
+    teleportPositions.keysIterator
+      .filter(code => code < 0 || code > 9)
+      .toVector
+      .sorted
+      .map(code => MapValidationError.UnsupportedTeleportCode(code))
+      .toList
+
+  private def pairTeleport(
+      code: Int,
+      teleportPositions: Map[Int, Vector[Position]]
+  ): PairResult =
+    val startPositions = teleportPositions.getOrElse(code, Vector.empty)
+    val pairedPositions = teleportPositions.getOrElse(code + 5, Vector.empty)
+    val occurrences = startPositions.size + pairedPositions.size
+
+    if occurrences == 0 then PairResult.empty
+    else if startPositions.size == 1 && pairedPositions.size == 1 then
+      PairResult(Nil, Some(code -> (startPositions.head, pairedPositions.head)))
+    else
+      PairResult(List(MapValidationError.InvalidTeleportPair(code, occurrences)), None)
+
+  private def reachabilityProblems(inspection: Inspection, reachable: Set[Position]): List[MapValidationError] =
+    unreachableCollectibles(inspection.collectibles, reachable).map(position => MapValidationError.UnreachableCollectible(position)).toList ++
+      unreachableEnemies(inspection.enemies, reachable).map(enemy => MapValidationError.UnreachableEnemy(enemy.position)).toList
+
+  private def unreachableCollectibles(collectibles: Vector[Position], reachable: Set[Position]): Vector[Position] =
+    collectibles.filterNot(reachable.contains).sortBy(position => (position.row, position.col))
+
+  private def unreachableEnemies(enemies: Vector[Enemy], reachable: Set[Position]): Vector[Enemy] =
+    enemies.filterNot(enemy => reachable.contains(enemy.position)).sortBy(enemy => (enemy.position.row, enemy.position.col))
 
   private def reachablePositions(
       map: RawMap,
       spawn: Position,
       teleports: Map[Int, (Position, Position)]
   ): Set[Position] =
-    val teleportLinks = teleports.valuesIterator.flatMap { case (start, paired) =>
-      Iterator(start -> paired, paired -> start)
-    }.toMap
+    val teleportLinks = teleportLinksFrom(teleports)
+    explore(map, teleportLinks, Queue(spawn), Set(spawn))
 
-    val visited = mutable.Set.empty[Position]
-    val queue = mutable.Queue.empty[Position]
-    visited += spawn
-    queue.enqueue(spawn)
+  @tailrec
+  private def explore(
+      map: RawMap,
+      teleportLinks: Map[Position, Position],
+      frontier: Queue[Position],
+      visited: Set[Position]
+  ): Set[Position] =
+    frontier.dequeueOption match
+      case None => visited
+      case Some((current, remaining)) =>
+        val nextPositions = adjacentPositions(map, current, teleportLinks).filterNot(visited.contains)
+        explore(map, teleportLinks, remaining.enqueueAll(nextPositions), visited ++ nextPositions)
 
-    while queue.nonEmpty do
-      val current = queue.dequeue()
-
-      for neighbor <- neighbors(map, current, teleportLinks) do
-        if visited.add(neighbor) then queue.enqueue(neighbor)
-
-    visited.toSet
-
-  private def neighbors(
+  private def adjacentPositions(
       map: RawMap,
       position: Position,
       teleportLinks: Map[Position, Position]
   ): Vector[Position] =
-    val adjacent = Vector(
+    orthogonalNeighbors(position).filter(isWalkable(map, _)) ++ teleportLinks.get(position)
+
+  private def orthogonalNeighbors(position: Position): Vector[Position] =
+    Vector(
       Position(position.row - 1, position.col),
       Position(position.row + 1, position.col),
       Position(position.row, position.col - 1),
       Position(position.row, position.col + 1)
-    ).filter(isWalkable(map, _))
-
-    adjacent ++ teleportLinks.get(position)
+    )
 
   private def isWalkable(map: RawMap, position: Position): Boolean =
     position.row >= 0 &&
@@ -135,3 +144,41 @@ object MapValidator:
     position.col >= 0 &&
     position.col < map.width &&
     map.rows(position.row)(position.col) != Cell.Wall
+
+  private def teleportLinksFrom(teleports: Map[Int, (Position, Position)]): Map[Position, Position] =
+    teleports.valuesIterator.flatMap { case (left, right) =>
+      Iterator(left -> right, right -> left)
+    }.toMap
+
+  private final case class Inspection(
+      spawnPositions: Vector[Position],
+      collectibles: Vector[Position],
+      enemies: Vector[Enemy],
+      teleportPositions: Map[Int, Vector[Position]]
+  ):
+    def record(cell: Cell, position: Position): Inspection =
+      cell match
+        case Cell.Wall | Cell.Floor | Cell.InvulnerabilityBonus | Cell.SlowdownBonus => this
+        case Cell.Spawn => copy(spawnPositions = spawnPositions :+ position)
+        case Cell.Collectible => copy(collectibles = collectibles :+ position)
+        case Cell.Hunter => copy(enemies = enemies :+ Enemy(position, EnemyKind.Hunter))
+        case Cell.Anticipator => copy(enemies = enemies :+ Enemy(position, EnemyKind.Anticipator))
+        case Cell.Teleport(code) => copy(teleportPositions = teleportPositions.updatedWith(code)(appendPosition(position)))
+
+  private object Inspection:
+    val empty: Inspection = Inspection(Vector.empty, Vector.empty, Vector.empty, Map.empty)
+
+  private final case class TeleportValidation(
+      errors: List[MapValidationError],
+      pairs: Map[Int, (Position, Position)]
+  )
+  private final case class PairResult(
+      errors: List[MapValidationError],
+      pair: Option[(Int, (Position, Position))]
+  )
+
+  private object PairResult:
+    val empty: PairResult = PairResult(Nil, None)
+
+  private def appendPosition(position: Position)(positions: Option[Vector[Position]]): Option[Vector[Position]] =
+    Some(positions.getOrElse(Vector.empty) :+ position)
