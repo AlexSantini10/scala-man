@@ -105,3 +105,8 @@ This format document only defines syntactic rules and symbol meaning.
 Gameplay rules such as reachability, teleport destination validity, and map
 playability are enforced by the validation layer. The validation layer also
 interprets the walkable cell underneath each overlay symbol.
+
+## Related
+
+- [`docs/map-generation.md`](map-generation.md) describes how valid maps are
+  generated from a specification.

@@ -12,6 +12,11 @@ import it.unibo.pps.scalaman.model.map.RawMap
 import it.unibo.pps.scalaman.model.map.ValidatedMap
 
 object MapValidator:
+  /** Validates a parsed map and enriches it with semantic information.
+    *
+    * This layer checks structural rules, teleport pairing, and graph reachability
+    * from the spawn point, using teleports as bidirectional edges.
+    */
   def validate(map: RawMap): Either[List[MapValidationError], ValidatedMap] =
     if hasInvalidDimensions(map) then
       Left(List(MapValidationError.InvalidDimensions(map.height, map.width)))
@@ -71,6 +76,7 @@ object MapValidator:
     )
 
   private def unsupportedTeleportCodeErrors(teleportPositions: Map[Int, Vector[Position]]): List[MapValidationError] =
+    // Defensive check for RawMap values constructed outside the parser.
     teleportPositions.keysIterator
       .filter(code => code < 0 || code > 9)
       .toVector
