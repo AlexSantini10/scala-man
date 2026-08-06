@@ -40,6 +40,7 @@ object MapParseError:
 
 sealed trait MapValidationError
 object MapValidationError:
+  final case class InvalidDimensions(height: Int, width: Int) extends MapValidationError
   case object MissingSpawn extends MapValidationError
   final case class InvalidSpawnCount(count: Int) extends MapValidationError
   case object MissingCollectible extends MapValidationError

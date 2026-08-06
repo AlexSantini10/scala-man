@@ -1,8 +1,10 @@
 package it.unibo.pps.scalaman.map.validation
 
 import it.unibo.pps.scalaman.model.map.EnemyKind
+import it.unibo.pps.scalaman.model.map.Cell
 import it.unibo.pps.scalaman.model.map.MapValidationError
 import it.unibo.pps.scalaman.model.map.MapTestSupport
+import it.unibo.pps.scalaman.model.map.RawMap
 import it.unibo.pps.scalaman.map.parser.MapParser
 import org.scalatest.funsuite.AnyFunSuite
 
@@ -31,6 +33,22 @@ class MapValidationSpec extends AnyFunSuite, MapTestSupport:
     assert(map.teleports.contains(0))
   }
 
+  test("accepts a valid playable map without teleports") {
+    val parsed = MapParser.parse(
+      mapText(
+        "#####",
+        "#S..#",
+        "#.C.#",
+        "#HA.#",
+        "#####"
+      )
+    ).toOption.get
+    val validated = MapValidator.validate(parsed)
+
+    assert(validated.isRight)
+    assert(validated.toOption.get.teleports.isEmpty)
+  }
+
   test("accepts every documented teleport pairing") {
     teleportPairs.foreach { case (start, paired) =>
       val parsed = MapParser.parse(teleportMap(start, paired)).toOption.get
@@ -39,6 +57,47 @@ class MapValidationSpec extends AnyFunSuite, MapTestSupport:
       assert(validated.isRight)
       assert(validated.toOption.get.teleports.contains(start))
     }
+  }
+
+  test("accepts collectibles reachable only through a teleport") {
+    val parsed = MapParser.parse(
+      mapText(
+        "#####",
+        "#S0##",
+        "##5C#",
+        "#HA.#",
+        "#####"
+      )
+    ).toOption.get
+    val validated = MapValidator.validate(parsed)
+
+    assert(validated.isRight)
+    assert(validated.toOption.get.collectibles.nonEmpty)
+  }
+
+  test("rejects raw maps with invalid dimensions") {
+    val validated = MapValidator.validate(RawMap(Vector.empty))
+
+    assert(validated.isLeft)
+    assert(validated.fold(_.contains(MapValidationError.InvalidDimensions(0, 0)), _ => false))
+  }
+
+  test("rejects unsupported teleport codes") {
+    val validated = MapValidator.validate(
+      RawMap(
+        Vector(
+          Vector(Cell.Wall, Cell.Wall, Cell.Wall),
+          Vector(Cell.Wall, Cell.Teleport(12), Cell.Wall),
+          Vector(Cell.Wall, Cell.Wall, Cell.Wall)
+        )
+      )
+    )
+
+    assert(validated.isLeft)
+    assert(validated.fold(_.exists {
+      case MapValidationError.UnsupportedTeleportCode(12) => true
+      case _ => false
+    }, _ => false))
   }
 
   test("rejects maps without a spawn") {
