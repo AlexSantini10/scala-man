@@ -14,8 +14,8 @@ import it.unibo.pps.scalaman.model.map.ValidatedMap
 object MapValidator:
   /** Validates a parsed map and enriches it with semantic information.
     *
-    * This layer checks structural rules, teleport pairing, and graph reachability
-    * from the spawn point, using teleports as bidirectional edges.
+    * This layer checks structural rules, teleport pairing, and graph reachability from the spawn
+    * point, using teleports as bidirectional edges.
     */
   def validate(map: RawMap): Either[List[MapValidationError], ValidatedMap] =
     if hasInvalidDimensions(map) then
@@ -31,7 +31,8 @@ object MapValidator:
 
       if allStructuralErrors.nonEmpty then Left(allStructuralErrors)
       else
-        val reachable = reachablePositions(map, inspection.spawnPositions.head, teleportValidation.pairs)
+        val reachable =
+          reachablePositions(map, inspection.spawnPositions.head, teleportValidation.pairs)
         val reachabilityIssues = reachabilityProblems(inspection, reachable)
 
         if reachabilityIssues.nonEmpty then Left(reachabilityIssues)
@@ -64,8 +65,8 @@ object MapValidator:
 
   private def spawnCountErrors(spawnPositions: Vector[Position]): List[MapValidationError] =
     spawnPositions.size match
-      case 0 => List(MapValidationError.MissingSpawn)
-      case 1 => Nil
+      case 0     => List(MapValidationError.MissingSpawn)
+      case 1     => Nil
       case count => List(MapValidationError.InvalidSpawnCount(count))
 
   private def pairTeleports(teleportPositions: Map[Int, Vector[Position]]): TeleportValidation =
@@ -75,7 +76,9 @@ object MapValidator:
       pairs = results.flatMap(_.pair).toMap
     )
 
-  private def unsupportedTeleportCodeErrors(teleportPositions: Map[Int, Vector[Position]]): List[MapValidationError] =
+  private def unsupportedTeleportCodeErrors(
+      teleportPositions: Map[Int, Vector[Position]]
+  ): List[MapValidationError] =
     // Defensive check for RawMap values constructed outside the parser.
     teleportPositions.keysIterator
       .filter(code => code < 0 || code > 9)
@@ -95,18 +98,29 @@ object MapValidator:
     if occurrences == 0 then PairResult.empty
     else if startPositions.size == 1 && pairedPositions.size == 1 then
       PairResult(Nil, Some(code -> (startPositions.head, pairedPositions.head)))
-    else
-      PairResult(List(MapValidationError.InvalidTeleportPair(code, occurrences)), None)
+    else PairResult(List(MapValidationError.InvalidTeleportPair(code, occurrences)), None)
 
-  private def reachabilityProblems(inspection: Inspection, reachable: Set[Position]): List[MapValidationError] =
-    unreachableCollectibles(inspection.collectibles, reachable).map(position => MapValidationError.UnreachableCollectible(position)).toList ++
-      unreachableEnemies(inspection.enemies, reachable).map(enemy => MapValidationError.UnreachableEnemy(enemy.position)).toList
+  private def reachabilityProblems(
+      inspection: Inspection,
+      reachable: Set[Position]
+  ): List[MapValidationError] =
+    unreachableCollectibles(inspection.collectibles, reachable)
+      .map(position => MapValidationError.UnreachableCollectible(position))
+      .toList ++
+      unreachableEnemies(inspection.enemies, reachable)
+        .map(enemy => MapValidationError.UnreachableEnemy(enemy.position))
+        .toList
 
-  private def unreachableCollectibles(collectibles: Vector[Position], reachable: Set[Position]): Vector[Position] =
+  private def unreachableCollectibles(
+      collectibles: Vector[Position],
+      reachable: Set[Position]
+  ): Vector[Position] =
     collectibles.filterNot(reachable.contains).sortBy(position => (position.row, position.col))
 
   private def unreachableEnemies(enemies: Vector[Enemy], reachable: Set[Position]): Vector[Enemy] =
-    enemies.filterNot(enemy => reachable.contains(enemy.position)).sortBy(enemy => (enemy.position.row, enemy.position.col))
+    enemies
+      .filterNot(enemy => reachable.contains(enemy.position))
+      .sortBy(enemy => (enemy.position.row, enemy.position.col))
 
   private def reachablePositions(
       map: RawMap,
@@ -124,9 +138,10 @@ object MapValidator:
       visited: Set[Position]
   ): Set[Position] =
     frontier.dequeueOption match
-      case None => visited
+      case None                       => visited
       case Some((current, remaining)) =>
-        val nextPositions = adjacentPositions(map, current, teleportLinks).filterNot(visited.contains)
+        val nextPositions =
+          adjacentPositions(map, current, teleportLinks).filterNot(visited.contains)
         explore(map, teleportLinks, remaining.enqueueAll(nextPositions), visited ++ nextPositions)
 
   private def adjacentPositions(
@@ -146,12 +161,14 @@ object MapValidator:
 
   private def isWalkable(map: RawMap, position: Position): Boolean =
     position.row >= 0 &&
-    position.row < map.height &&
-    position.col >= 0 &&
-    position.col < map.width &&
-    map.rows(position.row)(position.col) != Cell.Wall
+      position.row < map.height &&
+      position.col >= 0 &&
+      position.col < map.width &&
+      map.rows(position.row)(position.col) != Cell.Wall
 
-  private def teleportLinksFrom(teleports: Map[Int, (Position, Position)]): Map[Position, Position] =
+  private def teleportLinksFrom(
+      teleports: Map[Int, (Position, Position)]
+  ): Map[Position, Position] =
     teleports.valuesIterator.flatMap { case (left, right) =>
       Iterator(left -> right, right -> left)
     }.toMap
@@ -165,11 +182,12 @@ object MapValidator:
     def record(cell: Cell, position: Position): Inspection =
       cell match
         case Cell.Wall | Cell.Floor | Cell.InvulnerabilityBonus | Cell.SlowdownBonus => this
-        case Cell.Spawn => copy(spawnPositions = spawnPositions :+ position)
+        case Cell.Spawn       => copy(spawnPositions = spawnPositions :+ position)
         case Cell.Collectible => copy(collectibles = collectibles :+ position)
-        case Cell.Hunter => copy(enemies = enemies :+ Enemy(position, EnemyKind.Hunter))
+        case Cell.Hunter      => copy(enemies = enemies :+ Enemy(position, EnemyKind.Hunter))
         case Cell.Anticipator => copy(enemies = enemies :+ Enemy(position, EnemyKind.Anticipator))
-        case Cell.Teleport(code) => copy(teleportPositions = teleportPositions.updatedWith(code)(appendPosition(position)))
+        case Cell.Teleport(code) =>
+          copy(teleportPositions = teleportPositions.updatedWith(code)(appendPosition(position)))
 
   private object Inspection:
     val empty: Inspection = Inspection(Vector.empty, Vector.empty, Vector.empty, Map.empty)
@@ -186,5 +204,7 @@ object MapValidator:
   private object PairResult:
     val empty: PairResult = PairResult(Nil, None)
 
-  private def appendPosition(position: Position)(positions: Option[Vector[Position]]): Option[Vector[Position]] =
+  private def appendPosition(position: Position)(
+      positions: Option[Vector[Position]]
+  ): Option[Vector[Position]] =
     Some(positions.getOrElse(Vector.empty) :+ position)

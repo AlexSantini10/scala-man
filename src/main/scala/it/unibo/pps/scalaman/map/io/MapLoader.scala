@@ -15,4 +15,4 @@ object MapLoader:
       try Right(Files.readString(path, StandardCharsets.UTF_8))
       catch
         case _: NoSuchFileException => Left(MapLoadError.FileNotFound(path))
-        case ex: IOException => Left(MapLoadError.ReadFailed(path, ex.getMessage))
+        case ex: IOException        => Left(MapLoadError.ReadFailed(path, ex.getMessage))

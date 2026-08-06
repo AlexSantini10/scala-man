@@ -35,7 +35,8 @@ object MapLoadError:
 sealed trait MapParseError
 object MapParseError:
   case object EmptyMap extends MapParseError
-  final case class RaggedRow(rowIndex: Int, expectedWidth: Int, actualWidth: Int) extends MapParseError
+  final case class RaggedRow(rowIndex: Int, expectedWidth: Int, actualWidth: Int)
+      extends MapParseError
   final case class UnsupportedSymbol(symbol: Char, row: Int, col: Int) extends MapParseError
 
 sealed trait MapValidationError

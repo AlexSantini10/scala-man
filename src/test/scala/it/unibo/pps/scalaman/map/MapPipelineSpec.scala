@@ -12,7 +12,7 @@ class MapPipelineSpec extends AnyFunSuite, MapTestSupport:
       case Right(text) =>
         MapParser.parse(text) match
           case Right(parsed) => MapValidator.validate(parsed)
-          case Left(errors) => fail(s"Parsing failed unexpectedly: $errors")
+          case Left(errors)  => fail(s"Parsing failed unexpectedly: $errors")
       case Left(error) => fail(s"Loading failed unexpectedly: $error")
 
     assert(validated.isRight)
@@ -23,7 +23,7 @@ class MapPipelineSpec extends AnyFunSuite, MapTestSupport:
       case Right(text) =>
         MapParser.parse(text) match
           case Right(parsed) => MapValidator.validate(parsed)
-          case Left(errors) => fail(s"Parsing failed unexpectedly: $errors")
+          case Left(errors)  => fail(s"Parsing failed unexpectedly: $errors")
       case Left(error) => fail(s"Loading failed unexpectedly: $error")
 
     assert(validated.isLeft)

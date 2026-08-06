@@ -22,7 +22,7 @@ class MapLoaderSpec extends AnyFunSuite, MapTestSupport:
     assert(loaded.isLeft)
     assert(loaded.left.exists {
       case MapLoadError.FileNotFound(_) => true
-      case _ => false
+      case _                            => false
     })
   }
 
@@ -43,7 +43,7 @@ class MapLoaderSpec extends AnyFunSuite, MapTestSupport:
       assert(loaded.isLeft)
       assert(loaded.left.exists {
         case MapLoadError.ReadFailed(_, _) => true
-        case _ => false
+        case _                             => false
       })
     } finally Files.deleteIfExists(unreadable)
   }

@@ -80,10 +80,15 @@ class MapValidationSpec extends AnyFunSuite, MapTestSupport:
     )
 
     assert(validated.isLeft)
-    assert(validated.fold(_.exists {
-      case MapValidationError.UnsupportedTeleportCode(12) => true
-      case _ => false
-    }, _ => false))
+    assert(
+      validated.fold(
+        _.exists {
+          case MapValidationError.UnsupportedTeleportCode(12) => true
+          case _                                              => false
+        },
+        _ => false
+      )
+    )
   }
 
   test("rejects maps without a spawn") {
@@ -111,14 +116,20 @@ class MapValidationSpec extends AnyFunSuite, MapTestSupport:
   }
 
   test("rejects maps with a collectible in a separate component") {
-    val parsed = MapParser.parse(resourceText("invalid/collectible-separate-component.txt")).toOption.get
+    val parsed =
+      MapParser.parse(resourceText("invalid/collectible-separate-component.txt")).toOption.get
     val validated = MapValidator.validate(parsed)
 
     assert(validated.isLeft)
-    assert(validated.fold(_.exists {
-      case MapValidationError.UnreachableCollectible(_) => true
-      case _ => false
-    }, _ => false))
+    assert(
+      validated.fold(
+        _.exists {
+          case MapValidationError.UnreachableCollectible(_) => true
+          case _                                            => false
+        },
+        _ => false
+      )
+    )
   }
 
   test("rejects maps without enemies") {
@@ -134,10 +145,15 @@ class MapValidationSpec extends AnyFunSuite, MapTestSupport:
     val validated = MapValidator.validate(parsed)
 
     assert(validated.isLeft)
-    assert(validated.fold(_.exists {
-      case MapValidationError.UnreachableEnemy(_) => true
-      case _ => false
-    }, _ => false))
+    assert(
+      validated.fold(
+        _.exists {
+          case MapValidationError.UnreachableEnemy(_) => true
+          case _                                      => false
+        },
+        _ => false
+      )
+    )
   }
 
   test("rejects unreachable collectibles") {
@@ -145,10 +161,15 @@ class MapValidationSpec extends AnyFunSuite, MapTestSupport:
     val validated = MapValidator.validate(parsed)
 
     assert(validated.isLeft)
-    assert(validated.fold(_.exists {
-      case MapValidationError.UnreachableCollectible(_) => true
-      case _ => false
-    }, _ => false))
+    assert(
+      validated.fold(
+        _.exists {
+          case MapValidationError.UnreachableCollectible(_) => true
+          case _                                            => false
+        },
+        _ => false
+      )
+    )
   }
 
   test("rejects incomplete teleport pairs") {
@@ -156,10 +177,15 @@ class MapValidationSpec extends AnyFunSuite, MapTestSupport:
     val validated = MapValidator.validate(parsed)
 
     assert(validated.isLeft)
-    assert(validated.fold(_.exists {
-      case MapValidationError.InvalidTeleportPair(0, 1) => true
-      case _ => false
-    }, _ => false))
+    assert(
+      validated.fold(
+        _.exists {
+          case MapValidationError.InvalidTeleportPair(0, 1) => true
+          case _                                            => false
+        },
+        _ => false
+      )
+    )
   }
 
   test("rejects duplicated teleport cells") {
@@ -167,9 +193,14 @@ class MapValidationSpec extends AnyFunSuite, MapTestSupport:
     val validated = MapValidator.validate(parsed)
 
     assert(validated.isLeft)
-    assert(validated.fold(_.exists {
-      case MapValidationError.InvalidTeleportPair(0, 3) => true
-      case _ => false
-    }, _ => false))
+    assert(
+      validated.fold(
+        _.exists {
+          case MapValidationError.InvalidTeleportPair(0, 3) => true
+          case _                                            => false
+        },
+        _ => false
+      )
+    )
   }
 end MapValidationSpec

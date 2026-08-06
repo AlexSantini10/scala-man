@@ -12,7 +12,9 @@ class MapParserSpec extends AnyFunSuite, MapTestSupport:
   private def assertCell(map: RawMap, row: Int, col: Int, expected: Cell): Unit =
     assert(map.rows(row)(col) == expected)
 
-  test("parses a valid rectangular map with spawn, collectible, enemies, bonuses, and a teleport pair") {
+  test(
+    "parses a valid rectangular map with spawn, collectible, enemies, bonuses, and a teleport pair"
+  ) {
     val parsed = MapParser.parse(resourceText("valid/basic-map.txt"))
 
     assert(parsed.isRight)
@@ -28,7 +30,7 @@ class MapParserSpec extends AnyFunSuite, MapTestSupport:
     assert(map.rows.flatten.exists {
       case Cell.Teleport(0) => true
       case Cell.Teleport(5) => true
-      case _ => false
+      case _                => false
     })
   }
 
@@ -78,19 +80,29 @@ class MapParserSpec extends AnyFunSuite, MapTestSupport:
     val parsed = MapParser.parse(resourceText("invalid/ragged-map.txt"))
 
     assert(parsed.isLeft)
-    assert(parsed.fold(_.exists {
-      case MapParseError.RaggedRow(_, _, _) => true
-      case _ => false
-    }, _ => false))
+    assert(
+      parsed.fold(
+        _.exists {
+          case MapParseError.RaggedRow(_, _, _) => true
+          case _                                => false
+        },
+        _ => false
+      )
+    )
   }
 
   test("rejects unsupported symbols") {
     val parsed = MapParser.parse(resourceText("invalid/unsupported-symbol.txt"))
 
     assert(parsed.isLeft)
-    assert(parsed.fold(_.exists {
-      case MapParseError.UnsupportedSymbol(_, _, _) => true
-      case _ => false
-    }, _ => false))
+    assert(
+      parsed.fold(
+        _.exists {
+          case MapParseError.UnsupportedSymbol(_, _, _) => true
+          case _                                        => false
+        },
+        _ => false
+      )
+    )
   }
 end MapParserSpec

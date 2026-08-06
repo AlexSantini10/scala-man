@@ -7,8 +7,8 @@ import it.unibo.pps.scalaman.model.map.RawMap
 object MapParser:
   /** Converts a raw textual map into the intermediate `RawMap` representation.
     *
-    * The parser only checks syntax and symbol support. Gameplay constraints are
-    * deliberately deferred to the validation layer.
+    * The parser only checks syntax and symbol support. Gameplay constraints are deliberately
+    * deferred to the validation layer.
     */
   def parse(text: String): Either[List[MapParseError], RawMap] =
     val lines = text.linesIterator.toVector
@@ -51,13 +51,13 @@ object MapParser:
 
   private def supportedCell(char: Char): Option[Cell] =
     char match
-      case '#' => Some(Cell.Wall)
-      case '.' => Some(Cell.Floor)
-      case 'S' => Some(Cell.Spawn)
-      case 'C' => Some(Cell.Collectible)
-      case 'H' => Some(Cell.Hunter)
-      case 'A' => Some(Cell.Anticipator)
-      case 'I' => Some(Cell.InvulnerabilityBonus)
-      case 'R' => Some(Cell.SlowdownBonus)
+      case '#'                    => Some(Cell.Wall)
+      case '.'                    => Some(Cell.Floor)
+      case 'S'                    => Some(Cell.Spawn)
+      case 'C'                    => Some(Cell.Collectible)
+      case 'H'                    => Some(Cell.Hunter)
+      case 'A'                    => Some(Cell.Anticipator)
+      case 'I'                    => Some(Cell.InvulnerabilityBonus)
+      case 'R'                    => Some(Cell.SlowdownBonus)
       case digit if digit.isDigit => Some(Cell.Teleport(digit.asDigit))
-      case _ => None
+      case _                      => None
