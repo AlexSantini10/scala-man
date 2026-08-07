@@ -6,13 +6,14 @@ import org.scalatest.funsuite.AnyFunSuite
 import scala.concurrent.duration.DurationInt
 
 class MovingEntityTest extends AnyFunSuite:
-
+  private val millis = 100.millis
   private val startingCell = Cell(0, 0)
+
+  private val basicEntity = MovingEntity(startingCell, Left, millis, None)
   test("a moving entity that is not moving stays in its starting cell") {
-    assert(MovingEntity(startingCell).currentCell == startingCell)
+    assert(basicEntity.currentCell == startingCell)
   }
 
-  private val millis = 100.millis
   test(
     "a moving entity given a Movement correctly moves in the 4 directions Up, Down, Left, Right"
   ) {
@@ -24,7 +25,8 @@ class MovingEntityTest extends AnyFunSuite:
     )
     expectedTargets
       .foreach { case (direction, target) =>
-        val entity = MovingEntity(startingCell).move(direction, millis)
+        val entity = basicEntity.move(direction)
         assert(entity.movement.contains(Movement(startingCell, target, millis)))
+        assert(entity.facing === direction)
       }
   }
